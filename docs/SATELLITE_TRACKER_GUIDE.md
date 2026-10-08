@@ -8,6 +8,7 @@
 | **Firmware covered** | `tracker-v2.ino` (recommended) · `ardusat-tracker.ino` (v1, legacy) |
 | **Controller** | ESP32 DevKit (WROOM-32) |
 | **Data source** | [N2YO REST API](https://www.n2yo.com/api/) (internet required) |
+| **Satellites** | ISS, SO-50, AO-123, RS-44, FO-29, AO-7, Meteor-M, … see the **[Satellite Catalogue](SATELLITES.md)** |
 | **Motors** | 2 × stepper (STEP/DIR drivers) — azimuth + elevation |
 | **UI** | 2.8" ILI9341 TFT + KY-040 rotary encoder with push button |
 | **Audience** | Amateur-radio operators (LEO satellites: FM birds, ISS, APRS, weather) |
@@ -287,7 +288,7 @@ int   altitude  = 1600;                  // metres above sea level
 
 | Setting | How to get it |
 |---|---|
-| `noradID` | Search the satellite on n2yo.com. The NORAD/catalog number is in the URL and page header. Examples: **ISS = 25544**, **SO-50 = 27607**. Check AMSAT's status page to see which satellites are currently active. |
+| `noradID` | See the **[Satellite Catalogue](SATELLITES.md)** for current IDs, frequencies and status. Examples: **ISS = 25544**, **SO-50 = 27607**, **AO-123 = 61781**, **RS-44 = 44909**, **Meteor-M N2-4 = 59051**. Always check AMSAT's status page before a session. |
 | `latitude/longitude` | From Google Maps (right-click → coordinates) or a GPS. 4 decimals (~11 m) is plenty. |
 | `altitude` | Metres above sea level. Small errors don't matter much. |
 | Pin `#define`s | Only change them if your wiring differs from §4.1. |
@@ -410,8 +411,11 @@ The firmware points the antenna. **You** tune the radio.
 * **Doppler shift:** approximately ±3.5 kHz on 2 m and **±10 kHz on 70 cm** for LEO satellites. The frequency goes *down* during the pass.
 * **FM satellites, practical method:** program 5 memory channels for the 70 cm downlink in 5 kHz steps (+10, +5, 0, −5, −10 kHz) and step through them during the pass. Keep the 2 m uplink fixed.
 * **SO-50:** needs a 67.0 Hz CTCSS tone on the uplink (and a 74.4 Hz tone to arm its timer). See AMSAT's frequency list.
-* **ISS:** APRS on 145.825 MHz and occasional voice/SSTV on 145.800 MHz FM. Doppler is small enough on 2 m to ignore for FM.
-* **Weather (137 MHz):** **NOAA-15/18/19 APT were all decommissioned in 2025.** Use the Russian Meteor-M series (LRPT digital, decode with SatDump) and look up their current NORAD IDs on n2yo.com.
+* **ISS:** APRS on 145.825 MHz. Voice repeater 145.990 MHz up (67 Hz) / 437.800 MHz down. Voice/SSTV events on 145.800 MHz FM. Doppler is small enough on 2 m to ignore for FM.
+* **AO-123:** 145.850 MHz up (67 Hz) / 435.400 MHz down.
+* **Weather (137 MHz):** **NOAA-15/18/19 APT were all decommissioned in 2025.** Use Meteor-M N2-3 (57166) or N2-4 (59051): LRPT on 137.900 MHz, decoded with SatDump.
+* **Linear satellites (RS-44, FO-29, AO-7):** SSB/CW, need full-duplex all-mode radios and continuous Doppler correction.
+* Full list with status, tones, pass lengths and per-satellite settings: **[Satellite Catalogue](SATELLITES.md)**.
 * For automatic Doppler, run Gpredict or SatPC32 on a PC with CAT control of the radio. The ESP32 tracker can still drive the antenna in parallel.
 
 ---
@@ -521,7 +525,8 @@ N2YO's free API is limited **per endpoint type, per hour** (check [n2yo.com/api]
 |---|---|---|---|
 | Hour with no pass | 120 | 12 | ✅ |
 | Hour with a 10-min pass (+10-min prepass) | ≈ 600 + 120 + 80 = **≈ 800** | ≈ 28 | ⚠️ OK but close to the limit |
-| Hour with a long 15-min pass (higher orbits, e.g. SO-50) | ≈ 900 + 120 + 70 = **≈ 1090** | ≈ 33 | ❌ can hit the limit |
+| Hour with a long 15-min pass (higher LEO, e.g. Meteor-M) | ≈ 900 + 120 + 70 = **≈ 1090** | ≈ 32 | ❌ can hit the limit |
+| Hour with a 20-min **RS-44 / AO-7 / FO-29** pass | ≈ 1200 + 120 + 60 = **≈ 1380** | ≈ 36 | ❌ exceeds. Use a 3 s `INPASS` interval ([catalogue §7](SATELLITES.md#7-how-each-satellite-type-affects-the-firmware)). |
 | **v1** (`ardusat-tracker.ino`): pass every 30 s | ≈ 600–720 | **≈ 110–120** | ❌ exceeds the `/radiopasses` limit |
 
 > Real usage is a bit lower because each HTTPS request takes 0.3–2 s and blocks the loop.

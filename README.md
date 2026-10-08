@@ -21,6 +21,7 @@ flashing, calibration, tracking a real pass, the menu reference, troubleshooting
 | [Pointing geometry & drivetrain](docs/images/pointing-geometry.svg) | Azimuth/elevation and the steps-per-degree formula |
 | [Pass timeline](docs/images/pass-timeline.svg) | What the firmware does before, during and after a pass |
 | [Bill of materials (CSV)](docs/BOM.csv) | Parts list |
+| [Satellite catalogue](docs/SATELLITES.md) | Trackable satellites: NORAD IDs, frequencies, status, firmware settings per orbit type |
 
 ![Wiring schematic](docs/images/wiring-schematic.svg)
 
