@@ -12,7 +12,7 @@ The tracker follows **one satellite at a time**, chosen by `noradID` in `tracker
 
 | If you have… | Start with | Why |
 |---|---|---|
-| Dual-band FM handheld + handheld Yagi | **SO-50**, **AO-123**, **ISS** (repeater/APRS) | FM, no SSB needed, 10–15 min passes |
+| Dual-band FM handheld + handheld Yagi | **SO-50**, **AO-123**, **ISS** (voice repeater when enabled; APRS intermittent) | FM, no SSB needed, 10–15 min passes |
 | Receive-only SDR | **Meteor-M N2-3 / N2-4** (weather images), **ISS** SSTV events / repeater downlink when ARISS enables them | No licence needed to receive in most countries |
 | All-mode full-duplex radio (SSB/CW) | **RS-44**, **FO-29**, **AO-7** | Linear transponders with many simultaneous QSOs. RS-44 gives long passes and wide coverage. |
 | 2.4 GHz uplink + 10 GHz dish | **QO-100** (only inside its footprint, §5) | Geostationary, so no tracking needed |

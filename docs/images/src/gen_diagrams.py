@@ -120,7 +120,7 @@ s.save("system-architecture.svg")
 # =====================================================================
 # 2. Geometry + drivetrain
 # =====================================================================
-g = Svg(1360, 620)
+g = Svg(1360, 625)
 g.text(30, 38, "Pointing Geometry & Drivetrain", 22, "start", "#111827", "bold")
 g.text(30, 60, "N2YO returns azimuth/elevation for YOUR latitude/longitude/altitude — the rotator just has to reproduce those two angles",
        12, "start", "#4b5563")
@@ -196,12 +196,13 @@ for i, (t, sub) in enumerate(chain):
     g.box(960, y, 250, 58, "#fce7f3" if i < 2 else "#fef3c7", PINK if i < 2 else AMBER, t, [sub])
     if i < 3:
         g.line(1085, y + 58, 1085, y + 82, "#374151", arrow=True)
-g.rect(905, 465, 360, 125, "#f9fafb", "#d1d5db", sw=1.5)
+g.rect(905, 465, 360, 140, "#f9fafb", "#d1d5db", sw=1.5)
 g.text(1085, 487, "steps/deg = steps_rev × microsteps × ratio / 360", 12, "middle", "#111827", "bold")
 g.text(1085, 510, "200 × 16 × 5 / 360 = 44.4  (belt 5:1)", 12, "middle", "#374151")
-g.text(1085, 530, "200 × 16 × 50 / 360 = 444.4  (worm 50:1)", 12, "middle", "#374151")
-g.text(1085, 554, "Firmware default = 10.0 → set it in TrackerConfig", 11.5, "middle", RED, "bold")
-g.text(1085, 574, "°/s = steps/s ÷ steps/deg (firmware cap ≈ 1000 steps/s)", 11.5, "middle", "#374151")
+g.text(1085, 528, "200 × 16 × 50 / 360 = 444.4  (worm 50:1, too slow)", 12, "middle", "#374151")
+g.text(1085, 546, "200 × 8 × 30 / 360 = 133.3  (worm 30:1, TMC2209 ×8)", 12, "middle", "#374151")
+g.text(1085, 570, "Firmware default = 10.0 → set it in TrackerConfig", 11.5, "middle", RED, "bold")
+g.text(1085, 590, "°/s = steps/s ÷ steps/deg (firmware cap ≈ 1000 steps/s)", 11.5, "middle", "#374151")
 g.save("pointing-geometry.svg")
 
 # =====================================================================

@@ -183,7 +183,7 @@ Set the current limit to roughly **70 % of the motor's rated phase current** and
 * **A4988 / DRV8825:** bridge `RESET` ↔ `SLEEP`. Microstepping is set by `MS1–MS3` (A4988) or `M0–M2` (DRV8825). EN is active LOW (the menu default `EN active LOW = ON` matches).
 * **TMC2209 (standalone STEP/DIR):** `MS1/MS2` select 8/16/32/64 microsteps. EN is active LOW. UART is not used by this firmware.
 * **External opto-isolated drivers (DM542, TB6600):** inputs are usually specified for 5 V. Drive `PUL+`, `DIR+` and `ENA+` from the ESP32 through a **74AHCT125** level shifter (or use the driver's 24 V/5 V jumper per its manual), and tie `PUL−`, `DIR−` and `ENA−` to GND. On these drivers ENA *disables* the motor when its opto is energised, so with this wiring the default `EN active LOW = ON` is already correct: firmware "enable" = LOW = opto off = motor enabled.
-* **STEP pulse width:** the firmware never calls `setMinPulseWidth()`, so AccelStepper uses its default ~1 µs pulse. That is below the DRV8825 minimum (1.9 µs) and the DM542/TB6600 minimum (≥ 2.5 µs, plus ≥ 5 µs DIR set-up). For those drivers, add `stepperAz.setMinPulseWidth(3);` (DRV8825) or `(5)` (DM542/TB6600) for both axes in `setup()`.
+* **STEP pulse width:** the firmware never calls `setMinPulseWidth()`, so AccelStepper uses its default ~1 µs pulse. That is below the DRV8825 minimum (1.9 µs) and the DM542/TB6600 minimum (≥ 2.5 µs). For those drivers, add `stepperAz.setMinPulseWidth(3);` (DRV8825) or `(5)` (DM542/TB6600) for both axes in `setup()`. This only lengthens the STEP pulse. AccelStepper sets DIR and raises STEP immediately afterwards, so the DM542's ≥ 5 µs DIR set-up time is still not met. A reversal can lose up to one step unless you use FastAccelStepper (configurable dir-change delay) or a custom step routine.
 * **Microstepping changes steps/degree.** Recompute it (§5.3) after every jumper change.
 
 ---
@@ -205,8 +205,8 @@ The azimuth stage sits on the mast. The elevation stage rides on top of it, and 
 2. **Use a self-locking reduction on elevation (worm gear).** In `IDLE` the firmware *disables the motors* (`enableMotors(false)`). With a belt drive the antenna can sag or rotate in the wind while unpowered. The firmware never notices, so every later pass is mis-pointed. A worm gear holds position with zero power.
 3. **Choose the gear ratio for resolution *and* speed** (see §5.3):
    * more ratio → more torque and resolution, but a lower top speed in °/s;
-   * LEO satellites move at most a few °/s except near zenith (§13.6). Aim for **≥ 5 °/s** on azimuth and **≥ 2 °/s** on elevation.
-   * The firmware tops out at **about 1000 steps/s per axis** (§13.9), so keep `steps/deg ≤ ~150` if you want 5 °/s. Lower the microstepping rather than the gear ratio.
+   * LEO satellites move well under 1 °/s for most of a pass, with fast azimuth slews only on near-overhead passes (§13.6). Aim for **≥ 5 °/s** on azimuth and **≥ 2 °/s** on elevation.
+   * The firmware tops out at **about 1000 steps/s per axis** (§13.9), so keep `steps/deg ≤ ~150` if you want 5 °/s. Lower the microstepping rather than the gear ratio. Mind the driver: **TMC2209 standalone offers only ×8/×16/×32/×64**. A4988/DRV8825 can go down to ×1.
 4. **Plan the cable path.** Coax and motor cables must survive the full azimuth range. Either limit azimuth (`azContinuous = false`) or use a slip ring for power/control and a rotary-tolerant coax loop.
 5. **Weatherproof** the electronics enclosure (IP65), use drip loops, and protect the TFT behind a window or keep it indoors on a cable.
 6. **Wind load.** Even a small Yagi can catch enough wind to skip steps. Size the motor torque with margin (≥ 2×) and secure the mast.
@@ -223,7 +223,8 @@ steps_per_degree = motor_steps_per_rev × microsteps × gear_ratio / 360
 | GT2 belt 20T→100T (5:1), ×16 | **44.4** | 18 °/s |
 | Worm 30:1, ×16 | 266.7 | 3.0 °/s |
 | Worm 50:1, ×16 | 444.4 | 1.8 °/s. Too slow for azimuth, and raising `TR MaxSpd` won't help (§13.9). |
-| Worm 50:1, **×4** | **111.1** | 7.2 °/s ✅ (self-locking el, adequate az) |
+| Worm 50:1, **×4** (A4988/DRV8825, or TMC2209 via UART) | **111.1** | 7.2 °/s ✅ (self-locking el, adequate az) |
+| Worm 30:1, **×8** (TMC2209 standalone) | **133.3** | 6.0 °/s ✅ |
 
 > **The firmware default is `10.0` steps/deg.** That is almost certainly wrong for your build. Set `stepsPerDegAz/El` in `TrackerConfig` and flash, then use menu `DEFAULTS` → `SAVE`. Each menu click only changes it by 0.1, so use the menu for fine trimming only.
 
@@ -321,7 +322,7 @@ Do this on the bench first with motors **not** attached to the antenna, then rep
 | 2. Wait until ~30 s of uptime | Status screen with the satellite name appears (`Sat: SPACE STATION`). Pass state (`PREPASS`/countdown) only appears **~5 min after boot** (§13.7). | `Sat: -` → Wi-Fi/API problem (§12) |
 | 3. Click the encoder | `MENU [EDIT]` appears on `BW Az` (expected, §13.8). Click again → `[NAV]`. **Close it with a long press, never with the `EXIT` item.** | Nothing → encoder wiring/pull-ups |
 | 4. Turn the motor PSU on | Motors are mostly **unpowered** while idle (a faint tick is the EN flapping in §13.2) | Motors hold hard/hum while idle → wrong EN polarity |
-| 5. Motion test: set `parkAzDeg = 45`, `parkElDeg = 20` in `TrackerConfig`, flash, then Menu → `DEFAULTS` → `PARK NOW` and close the menu (long press). Restore 0/0 afterwards. | Both axes move to 45°/20° and the TFT `C:` values follow. (`PARK NOW` with the defaults does nothing: the position at boot already equals park 0/0.) | No motion → STEP/DIR/GND, Vref, VMOT |
+| 5. Motion test (bench only, motors not on the antenna): set `parkAzDeg = 45`, `parkElDeg = 20` in `TrackerConfig` and flash. **If nothing was saved yet, the rotator drives to 45°/20° by itself right after boot.** Otherwise: Menu → click again for `[NAV]` → `DEFAULTS` → `PARK NOW` → scroll back to `BW Az` → long press to close. Afterwards, power off, **turn both axes back to 0°/0° by hand**, restore 0/0 in the code and re-flash. | Both axes move to 45°/20° and the TFT `C:` values follow. (`PARK NOW` with the defaults does nothing: the position at boot already equals park 0/0.) | No motion → STEP/DIR/GND, Vref, VMOT |
 
 ### 7.2 Set the zero position (no homing switches)
 
@@ -337,7 +338,7 @@ Without home switches, **the firmware assumes the antenna is at Az 0°, El 0° w
 
 ### 7.3 Verify steps/degree and direction
 
-1. Enter `Steps/deg AZ` and `Steps/deg EL` from §5.3 and **SAVE**.
+1. Set `stepsPerDegAz/El` from §5.3 in `TrackerConfig`, flash, then Menu → `DEFAULTS` → `SAVE` (use the menu items only for small trims).
 2. Add a printed **360° protractor ring** on the az stage and a pointer, and keep the inclinometer on the boom.
 3. Wait for a pass (or temporarily set `Prepass` to 3600 s so `PREPASS` starts early). Compare the TFT `Az … C:` / `El … C:` readout with the physical pointer at several angles.
 4. **Direction reversed?** Swap one coil pair (`1A↔1B`) on that motor with power off.
@@ -357,7 +358,7 @@ Gear and belt slack makes the antenna lag when an axis reverses.
 1. Mount one switch at the az end stop and one at the el low stop. If the el switch is at 0°, set `EL Min` to 0 so the firmware never drives into it (the default is −5°).
 2. Wire them per the schematic (NO → GND, 10 kΩ pull-up, 100 nF).
 3. Set `#define USE_HOMING 1` and check `HOME_AZ_DIR` / `HOME_EL_DIR` (`-1` or `+1`), meaning the direction that moves *toward* the switch.
-4. Menu → `HOME NOW`, then **close the menu immediately with a long press**. Homing only runs while the menu is closed, and its 30 s timeout starts when you press the item. Az seeks its switch, zeroes, backs off 200 steps, then el does the same. A timeout fails **silently**: the axis is not zeroed and the state goes to PARKING, so watch it finish.
+4. Menu → `HOME NOW`, then **scroll back to a setting (e.g. `BW Az`) and close the menu with a long press right away**. Leaving the cursor on `HOME NOW` would re-run homing the next time you open the menu (§13.8). Homing only runs while the menu is closed, and its 30 s timeout starts when you press the item. Az seeks its switch, zeroes, backs off 200 steps, then el does the same. A timeout fails **silently**: the axis is not zeroed and the state goes to PARKING, so watch it finish.
 5. Mount the switches so that **the switch position is your 0° reference**, or adjust `parkAzDeg/parkElDeg` in `TrackerConfig` accordingly.
 
 > Homing is **not** run automatically at boot in v2. Run `HOME NOW` manually after power-up.
@@ -378,6 +379,7 @@ stateDiagram-v2
     IDLE --> PREPASS: now ≥ AOS − prepassSec
     PARKING --> PREPASS: now ≥ AOS − prepassSec
     PREPASS --> INPASS: now ≥ AOS (startUTC)
+    PREPASS --> PARKING: pass window changed or dropped by refresh
     PARKING --> INPASS: first pass fetch lands mid-pass
     IDLE --> INPASS: first pass fetch lands mid-pass
     INPASS --> PARKING: now > LOS (endUTC)
@@ -419,7 +421,7 @@ The firmware points the antenna. **You** tune the radio.
 * **Doppler shift:** approximately ±3.5 kHz on 2 m and **±10 kHz on 70 cm** for LEO satellites. The frequency goes *down* during the pass.
 * **FM satellites, practical method:** program 5 memory channels for the 70 cm downlink in 5 kHz steps (+10, +5, 0, −5, −10 kHz) and step through them during the pass. Keep the 2 m uplink fixed.
 * **SO-50:** needs a 67.0 Hz CTCSS tone on the uplink (and a 74.4 Hz tone to arm its timer). See AMSAT's frequency list.
-* **ISS:** APRS on 145.825 MHz. Voice repeater 145.990 MHz up (67 Hz) / 437.800 MHz down. Voice/SSTV events on 145.800 MHz FM. Doppler is small enough on 2 m to ignore for FM.
+* **ISS:** APRS on 145.825 MHz (intermittent in 2026, check ARISS). Voice repeater 145.990 MHz up (67 Hz) / 437.800 MHz down. Voice/SSTV events on 145.800 MHz FM. Doppler is small enough on 2 m to ignore for FM.
 * **AO-123:** 145.850 MHz up (67 Hz) / 435.400 MHz down.
 * **Weather (137 MHz):** **NOAA-15/18/19 APT were all decommissioned in 2025.** Use Meteor-M N2-3 (57166) or N2-4 (59051): LRPT on 137.900 MHz, decoded with SatDump.
 * **Linear satellites (RS-44, FO-29, AO-7):** SSB/CW, need full-duplex all-mode radios and continuous Doppler correction.
@@ -564,7 +566,7 @@ N2YO's free API is limited **per endpoint type, per hour** (check [n2yo.com/api]
 | Az spins ~360° mid-pass | Pass crosses north with `azContinuous = false` | Expected. See §13.6. |
 | Settings reset after reboot | Didn't `SAVE`, or struct changed after an update | Menu → `SAVE` |
 | Menu won't open any more | It was closed with the `EXIT` item (§13.8) | Reboot. From then on, close it with a long press. |
-| Settings suddenly back to defaults | The opening click ran `DEFAULTS` (§13.8) | Re-enter the settings and `SAVE`. Close the menu with a long press. |
+| Settings suddenly back to defaults | The opening click ran `DEFAULTS` (§13.8) | **Don't SAVE.** Reboot: `DEFAULTS` only changed the live copy, so the stored settings come back. |
 | `TR MaxSpd` increase has no effect | Step-rate ceiling ≈ 1000 st/s (§13.9) | Lower the microstepping or remove `delay(1)` |
 
 ---
@@ -627,7 +629,7 @@ In `loop()`, the click that sets `menuOpen = true` is passed straight to `menuHa
 
 ### 13.11 Pass window replaced during a pass (unverified risk)
 During `INPASS` the firmware calls `/radiopasses` every 60 s and overwrites `startUTC/endUTC` with `passes[0]`. If N2YO's response doesn't include the pass already in progress, the window jumps to the *next* pass and the state flips to `PARKING` mid-pass. I could not verify N2YO's behaviour here.
-**Fix:** don't replace the window while `now` is inside it (skip `actualizarPase()` in `INPASS`, or only accept passes with `endUTC` ≥ the current `endUTC`).
+**Fix:** don't replace the window while `now` is inside it (skip `actualizarPase()` until `now > tiempoFinPase`, or while `now ≤ tiempoFinPase` ignore any response whose `startUTC > tiempoFinPase`).
 
 ### 13.12 Roadmap
 The BLDC item comes from the original project README. The rest are suggestions from this review.
@@ -644,7 +646,7 @@ The BLDC item comes from the original project README. The rest are suggestions f
 | Motor pins | **Placeholders `0`**. Must be edited, and GPIO0 is a boot pin. | 26/27/14 (az), 33/25/32 (el) + EN |
 | Enable pins | none (always energised) | yes, motors off when idle |
 | Pass logic | Display-only countdown. Moves **azimuth on every poll** (even below the horizon) and elevation only when el > 0. Elevation is never returned afterwards. No north-wrap handling (359° → 1° swings 358°). | State machine with pre-positioning and parking |
-| Polling | Fixed: position 5 s, pass 30 s (**over the radiopasses limit**) | Adaptive 1 s / 5 s / 30 s and 60 s / 300 s |
+| Polling | Fixed: position 5 s, pass ~30 s (**at or over the radiopasses limit**) | Adaptive 1 s / 5 s / 30 s and 60 s / 300 s |
 | Deadband / backlash / limits | none | yes |
 | UI | TFT status only | TFT + encoder menu, NVS persistence |
 | Wi-Fi recovery | blocks forever in `setup()` if no Wi-Fi | timeouts + auto-reconnect |
