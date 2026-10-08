@@ -319,7 +319,7 @@ Double it for margin, then add wind load, which usually dominates. Balancing the
 | Library | Author | Used for |
 |---|---|---|
 | **ArduinoHttpClient** | Arduino | HTTP GET over `WiFiClientSecure` |
-| **ArduinoJson** | Benoît Blanchon | Parsing N2YO responses. v6 compiles cleanly. v7 also works but warns that `StaticJsonDocument` is deprecated. |
+| **ArduinoJson** | Benoît Blanchon | Parsing N2YO responses. v6.21.x and v7.x both work. With v7 and *Compiler warnings* ≥ Default you'll see two harmless `StaticJsonDocument is deprecated` warnings. At the IDE default (None) no warnings are shown. |
 | **Adafruit GFX Library** | Adafruit | Graphics primitives |
 | **Adafruit ILI9341** | Adafruit | TFT driver (pulls in Adafruit BusIO) |
 | **AccelStepper** | Mike McCauley | Stepper acceleration profiles (v2 only) |
@@ -383,6 +383,10 @@ int   altitude  = 1600;                  // metres above sea level
 > 4. Add a `.gitignore` containing `secrets.h`.
 
 ### 6.4 Build and upload
+
+> ⚠️ **`tracker-v2.ino` on `main` does not compile** with current tools. It gives `'MotionProfile' was not declared in this scope` and then a link error `dangerous relocation: l32r … isrA`. A minimal fix that changes no behaviour is on branch **`claude/tracker-v2-compile-fix`**: two enums moved up, and the encoder ISR defined outside its class. Use the sketch from that branch until it is merged. `ardusat-tracker.ino` (v1) compiles unchanged.
+>
+> **Tested build:** arduino-cli 1.5.1, esp32 core 3.0.4 (GCC 12.2), ArduinoHttpClient 0.6.2, ArduinoJson 7.4.3 and 6.21.6, Adafruit GFX 1.12.6, Adafruit ILI9341 1.6.4, Adafruit BusIO 1.17.4, AccelStepper 1.64. Flash use is about 1.09 MB (83 % of the default partition) and RAM about 49 KB (15 %). Newer cores (3.3.x) were not tested.
 
 0. **Make a sketch folder.** Arduino IDE compiles every `.ino` in a folder together, and this repo has two (v1 and v2). Create a folder named `tracker-v2`, copy `tracker-v2.ino` into it, and open *that* file. If you see `redefinition of 'void setup()'`, you opened the repo folder instead.
 1. Connect the ESP32 by USB and select the port under *Tools → Port*. **No new port?**
@@ -661,7 +665,9 @@ N2YO's free API is limited **per endpoint type, per hour** (check [n2yo.com/api]
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `redefinition of 'void setup()'` when compiling | Both `.ino` files are in one sketch folder | §6.4 step 0 |
+| `redefinition of 'void setup()'` (or `'TrackerConfig' does not name a type`) when compiling | Both `.ino` files are in one sketch folder | §6.4 step 0 |
+| `'MotionProfile' was not declared in this scope` / `variable or field 'applyMotionProfile' declared void` | Enums declared after Arduino's auto-generated prototypes (bug in `main`) | Use `tracker-v2.ino` from branch `claude/tracker-v2-compile-fix` (§6.4) |
+| `dangerous relocation: l32r: literal placed after use … isrA` (link error) | `IRAM_ATTR` on an in-class function body (bug in `main`) | Same branch: `claude/tracker-v2-compile-fix` |
 | No COM/tty port appears | Charge-only cable, missing CP210x/CH340 driver, Linux permissions | §6.4 step 1 |
 | TFT white or blank | SPI wiring, missing 3V3/LED, wrong `TFT_*` pins, ST7789 look-alike | Re-check §4.1. Try the Adafruit `graphicstest` example. |
 | `Booting...` lasts ~40 s | Wi-Fi and/or NTP timing out (20 s each) | 2.4 GHz SSID, correct password, NTP/UDP 123 allowed |
@@ -698,7 +704,7 @@ These findings come from reviewing the current code. Each one lists the impact a
 `client.get()` and `responseBody()` are synchronous. During each 0.3–2 s TLS request, `stepperAz.run()` is not called, so motion freezes mid-move. During `INPASS` that happens every second.
 **Fix options (pick one):**
 * **Best: compute orbits locally.** Fetch the TLE once a day (`/tle` endpoint or CelesTrak) and propagate with an SGP4 library on the ESP32. That means no API calls during a pass, much smoother motion, and it keeps working through Wi-Fi drop-outs.
-* **Simpler:** request `/positions/.../300/`, which returns 300 one-second positions per call. Interpolate locally and call again every ~4 minutes. That is 3–5 calls per pass (~15 per hour) instead of ~600. The response is ~50–55 KB, so use an ArduinoJson *filter* or a larger `DynamicJsonDocument`, or keep only every 10th sample.
+* **Simpler:** request `/positions/.../300/`, which returns 300 one-second positions per call. Interpolate locally and call again every ~4 minutes. That is 3–5 calls per pass (~15 per hour) instead of ~600. The response is ~50–55 KB, so use an ArduinoJson *filter* or a larger `JsonDocument` (v7; `DynamicJsonDocument` in v6), or keep only every 10th sample.
 * **Structural:** move networking to a FreeRTOS task pinned to core 0 and pass targets to the motion loop through a queue.
 
 ### 13.2 PARKING ↔ IDLE flapping
@@ -728,6 +734,7 @@ Satellite ID, location, Wi-Fi, API key, park position and azimuth mode are compi
 * Credentials are in the source. Move them to `secrets.h` and add it to `.gitignore`.
 * `tft.fillScreen()` on every update flickers and costs time. Redraw only the fields that changed.
 * The pass query uses `min_elevation = 0`, so very low passes are tracked. Use `/radiopasses/.../1/10/` for ≥ 10° passes.
+* `self->ticks += dir;` in the encoder ISR triggers a harmless `-Wvolatile` warning (C++20). Fix: `self->ticks = self->ticks + dir;`.
 * The CRC is computed over the raw struct including padding bytes, and the copy inside `computeCfgCrc()` doesn't guarantee that padding survives. A `memset` alone doesn't fix that. Compute the CRC field by field, or over a packed serialisation.
 * Homing is not automatic at boot, and the `HOMING` profile is only used when `USE_HOMING 1`.
 * **Slow first fetch:** `lastPassMs = lastPosMs = 0` doesn't force an early request as its comment intends. The first `/positions` call waits until `millis() ≥ 30 s` and the first `/radiopasses` until `millis() ≥ 300 s`. Fix: call `actualizarPase(); obtenerPosicionActual();` at the end of `setup()`.

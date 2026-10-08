@@ -146,19 +146,29 @@ The NORAD ID is compiled in, so:
 **Suggested improvement (not applied, firmware unchanged):** a small list plus a menu entry so you can pick the satellite on the device. One way to do it:
 
 ```cpp
+// Place above obtenerPosicionActual() and menuItems[] (e.g. right after the WIFI / API block)
 struct SatEntry { const char* name; uint32_t norad; };
 const SatEntry kSats[] = {
   {"ISS", 25544}, {"SO-50", 27607}, {"AO-123", 61781},
   {"RS-44", 44909}, {"FO-29", 24278}, {"AO-7", 7530},
   {"METEOR N2-3", 57166}, {"METEOR N2-4", 59051},
 };
-// TrackerConfig: add  uint32_t satIndex = 0;  (bump cfg version)
-// Must be uint32_t: menuHandle() writes IT_UINT32 items through a uint32_t*.
-// Use kSats[cfg.satIndex].norad when building the N2YO URLs,
-// and add an IT_UINT32-style menu item with range 0..N-1.
+const uint32_t kSatCount = sizeof(kSats) / sizeof(kSats[0]);
+
+// TrackerConfig: add  uint32_t satIndex = 0;
+//   Must be uint32_t: menuHandle() writes IT_UINT32 items through a uint32_t*.
+//   Change version 1 -> 2 in THREE places: the struct default, validateCfg()
+//   and saveConfig() (inout.version = 1;). Missing saveConfig() makes every
+//   SAVE fail validation, so settings reset at each boot.
+//   validateCfg(): if (c.satIndex >= kSatCount) return false;
+//
+// Both URL builders: replace String(noradID) with String(kSats[cfg.satIndex].norad)
+//
+// menuItems[]:
+//   {"Satellite", IT_UINT32, &cfg.satIndex, 0,0,0, 0,0,0, 1, 0, kSatCount - 1, "", ACT_EXIT},
 ```
 
-Remember to clear `tiempoInicioPase/tiempoFinPase` and force an `actualizarPase()` after switching.
+Compile-checked (on top of the compile fix in branch `claude/tracker-v2-compile-fix`, esp32 core 3.0.4). Remember to clear `tiempoInicioPase/tiempoFinPase` and force an `actualizarPase()` after switching.
 
 ---
 

@@ -36,7 +36,7 @@ flashing, calibration, tracking a real pass, the menu reference, troubleshooting
 
 1. **Pick parts:** [Guide §3](docs/SATELLITE_TRACKER_GUIDE.md#3-bill-of-materials--what-you-need). Choose a driver and a microstep setting.
 2. **Wire it:** follow the [schematic](docs/images/wiring-schematic.svg), set the microstep jumpers (§4.4), and run the **before first power-on** checks: buck at 5.00 V, driver orientation, Vref (§4.5).
-3. **Install the toolchain** (§6.1) and copy `tracker-v2.ino` into **its own `tracker-v2` folder** (the repo holds two sketches, which won't compile together).
+3. **Install the toolchain** (§6.1) and copy `tracker-v2.ino` into **its own `tracker-v2` folder** (the repo holds two sketches, which won't compile together). ⚠️ Take `tracker-v2.ino` from branch `claude/tracker-v2-compile-fix`: the copy on `main` doesn't compile with current ESP32 tools ([details](docs/SATELLITE_TRACKER_GUIDE.md#64-build-and-upload)).
 4. **Configure** Wi-Fi, API key, `noradID`, location and `stepsPerDegAz/El` in the sketch (§6.3, §5.3).
 5. **Flash, then do the bench test** (§7.1).
 6. **Align the antenna to true north and the horizon** and power up ≥ 20 min before AOS (§7.2, §8.2).
