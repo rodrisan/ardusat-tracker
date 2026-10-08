@@ -1,0 +1,24 @@
+ref,category,item,qty,spec,notes
+E1,electronics,ESP32 dev board,1,ESP32-WROOM-32 DevKit V1 (30/38 pin),Classic ESP32 required (GPIO34/35/36/39 used)
+E2,electronics,TFT display,1,2.8in ILI9341 SPI 320x240,3.3 V logic; touch not used
+E3,electronics,Rotary encoder,1,KY-040 with push button,Power from 3V3 only
+E4,electronics,Stepper driver,2,TMC2209 (or A4988 / DRV8825; DM542 for NEMA23),STEP/DIR/EN; set Vref before connecting motors
+E5,electronics,Stepper motor,2,NEMA17 1.8deg 40-60 Ncm <=1.7 A,NEMA23 for heavier antennas
+E6,electronics,Motor power supply,1,12-24 V DC >=3 A,Within driver VMOT rating
+E7,electronics,Buck converter,1,LM2596 or MP1584 set to 5.0 V,Feeds ESP32 VIN
+E8,electronics,Electrolytic capacitor,2,100 uF >=35 V,Across VMOT-GND at each driver
+E9,electronics,Resistor,6,10 kOhm 1/4 W,EN pull-ups x2; encoder A/B pull-ups x2 (if not on module); home switch pull-ups x2 (optional)
+E10,electronics,Fuse + holder,1,3-5 A,On PSU positive output
+E11,electronics,Limit/home switch,2,NO lever micro-switch + 100 nF cap,Optional (USE_HOMING 1)
+E12,electronics,Wiring & enclosure,1,Perfboard/PCB; terminals; 20-22 AWG wire; IP65 box,Shielded/twisted pairs for motor runs
+M1,mechanical,Azimuth bearing,1,Lazy-Susan / slewing ring / tapered roller,Carries antenna weight
+M2,mechanical,Elevation axle + bearings,1,8 mm shaft + 2x KP08 pillow blocks,Axle through antenna centre of gravity
+M3,mechanical,Reduction per axis,2,Worm gear (self-locking) or GT2 belt 5:1 or planetary NEMA17,Worm strongly recommended for elevation
+M4,mechanical,Mast / tripod,1,Rated for local wind load,Grounded
+M5,mechanical,Counterweight,1,As needed,Balance elevation axis
+M6,mechanical,Cable management,1,Drip loops; cable wrap or slip ring; strain relief,Plan for full azimuth range
+R1,rf,Antenna,1,Dual-band 2 m / 70 cm Yagi or LPDA,Know its -3 dB beamwidth for the menu
+R2,rf,Transceiver or SDR,1,Dual-band FM (full duplex preferred) / SDR,Doppler tuned manually or by PC CAT
+R3,rf,Coax,1,Low-loss flexible,Leave a service loop for rotation
+S1,service,N2YO API key,1,Free account at n2yo.com,Respect per-endpoint hourly limits
+S2,service,2.4 GHz Wi-Fi with internet,1,WPA2,ESP32 has no 5 GHz radio
