@@ -104,7 +104,7 @@ The firmware's defaults (`tracker-v2.ino`) were written with ~10-minute LEO pass
 | MEO (~5800 km) | IO-117 (dead), future MEO birds | 1 h + | 3600+ | ❌❌ | Very slow |
 | GEO | QO-100 | — (always up or never) | — | n/a (no pass, see §5) | 0 |
 
-### Recommended change: poll less often during a pass
+### Suggested change (not applied): poll less often during a pass
 
 With the default 10° deadband (`BW 20 × 0.5`) and LEO angular rates of roughly 0.1–0.5°/s for most of a pass (≈ 1°/s only near zenith on high passes), asking for the position every second gains almost nothing. A **3 s** interval keeps tracking error well inside the deadband and cuts usage by about 3×:
 
@@ -143,7 +143,7 @@ The NORAD ID is compiled in, so:
 2. Re-flash. Saved menu settings (NVS) are kept.
 3. Adjust `BW` / `Deadband` in the menu for the antenna you're using, and **SAVE**.
 
-**Suggested improvement:** a small list plus a menu entry so you can pick the satellite on the device. One way to do it:
+**Suggested improvement (not applied, firmware unchanged):** a small list plus a menu entry so you can pick the satellite on the device. One way to do it:
 
 ```cpp
 struct SatEntry { const char* name; uint32_t norad; };

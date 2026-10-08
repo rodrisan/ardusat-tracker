@@ -692,6 +692,8 @@ N2YO's free API is limited **per endpoint type, per hour** (check [n2yo.com/api]
 
 These findings come from reviewing the current code. Each one lists the impact and a targeted fix.
 
+> **These are suggestions only. The firmware in this repository is unchanged.** The guide documents `tracker-v2.ino` exactly as it is, with workarounds for each issue. Any code fix should go on its own branch.
+
 ### 13.1 Network calls block motion (highest impact)
 `client.get()` and `responseBody()` are synchronous. During each 0.3–2 s TLS request, `stepperAz.run()` is not called, so motion freezes mid-move. During `INPASS` that happens every second.
 **Fix options (pick one):**
