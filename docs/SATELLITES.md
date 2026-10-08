@@ -131,7 +131,7 @@ For long passes, the more robust fixes are in the guide's [§13.1](SATELLITE_TRA
 | `BW Az / El` | 40–60° | 25–40° | 60–70° |
 | `Deadband` | 0.3 | 0.25 | 0.3 |
 | `Prepass` | 600 s | 600 s | 300 s |
-| Min. pass elevation (code: `/radiopasses/.../1/<minEl>/`) | 15–20° | 10° | 20° |
+| Min. pass elevation (in `actualizarPase()` change `"/1/0/&apiKey="` to e.g. `"/1/15/&apiKey="`) | 15–20° | 10° | 20° |
 
 ---
 

@@ -34,12 +34,13 @@ flashing, calibration, tracking a real pass, the menu reference, troubleshooting
 
 ## Quick start
 
-1. Wire it as in the [schematic](docs/images/wiring-schematic.svg).
-2. Install the ESP32 core plus the libraries ArduinoHttpClient, ArduinoJson, Adafruit GFX, Adafruit ILI9341 and AccelStepper.
-3. In `tracker-v2.ino`, set `ssid`, `password`, `apiKey`, `noradID`, `latitude`, `longitude` and `altitude`.
-4. Flash it, point the antenna at **true north and the horizon**, then power up.
-5. Set `stepsPerDegAz/El` for your gearing in `TrackerConfig` before flashing (the menu changes it by 0.1 per click, which is only good for trimming).
+1. **Pick parts:** [Guide §3](docs/SATELLITE_TRACKER_GUIDE.md#3-bill-of-materials--what-you-need). Choose a driver and a microstep setting.
+2. **Wire it:** follow the [schematic](docs/images/wiring-schematic.svg), set the microstep jumpers (§4.4), and run the **before first power-on** checks: buck at 5.00 V, driver orientation, Vref (§4.5).
+3. **Install the toolchain** (§6.1) and copy `tracker-v2.ino` into **its own `tracker-v2` folder** (the repo holds two sketches, which won't compile together).
+4. **Configure** Wi-Fi, API key, `noradID`, location and `stepsPerDegAz/El` in the sketch (§6.3, §5.3).
+5. **Flash, then do the bench test** (§7.1).
+6. **Align the antenna to true north and the horizon** and power up ≥ 20 min before AOS (§7.2, §8.2).
 
-⚠️ Close the on-device menu with a **long press**, never with its `EXIT` item ([why](docs/SATELLITE_TRACKER_GUIDE.md#138-menu-the-opening-click-also-activates-the-selected-item)).
+⚠️ Close the on-device menu with a **long press on a setting item**, never with its `EXIT` item ([why](docs/SATELLITE_TRACKER_GUIDE.md#138-menu-the-opening-click-also-activates-the-selected-item)).
 
 Full details are in the [guide](docs/SATELLITE_TRACKER_GUIDE.md).

@@ -160,7 +160,7 @@ g.text(cx - 6, cy - 44, "az", 12, "end", BLUE, "bold")
 g.add(f'<circle cx="{cx}" cy="{cy}" r="5" fill="#111827"/>')
 g.text(cx, cy + 22, "you", 11, "middle", "#111827")
 g.text(cx, 545, "Azimuth: clockwise from TRUE north (not magnetic)", 11.5, "middle", "#374151")
-g.text(cx, 562, "Centre = zenith (90°), edge = horizon (0°)", 11.5, "middle", "#374151")
+g.text(cx, 562, "Rings = elevation: centre = zenith (90°), edge = horizon (0°)", 11.5, "middle", "#374151")
 
 # Panel B: side view (elevation)
 ox, oy = 520, 470
@@ -242,7 +242,7 @@ rows = [("State", 230), ("Motors", 290), ("/positions every", 350), ("/radiopass
 for name, y in rows:
     t.text(30, y + 22, name, 13, "start", "#111827", "bold")
 cells = {
-    "Motors": ["disabled", "enabled · track", "enabled · track", "enabled · park", "disabled"],
+    "Motors": ["disabled (EN flaps, §13.2)", "enabled · track", "enabled · track", "enabled · park", "disabled (EN flaps, §13.2)"],
     "/positions every": ["30 s", "5 s", "1 s *", "30 s", "30 s"],
     "/radiopasses every": ["300 s", "60 s", "60 s", "300 s", "300 s"],
 }

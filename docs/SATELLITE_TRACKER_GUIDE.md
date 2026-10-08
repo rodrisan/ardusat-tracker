@@ -76,18 +76,29 @@ A machine-readable copy is in [`BOM.csv`](BOM.csv).
 | # | Item | Qty | Recommended spec | Notes |
 |---|---|---|---|---|
 | E1 | ESP32 dev board | 1 | ESP32-WROOM-32 "DevKit V1" (30 or 38 pin) | Must be classic ESP32 (the pin map uses GPIO 34/35/36/39). S2/S3/C3 need a new pin map. |
-| E2 | TFT display | 1 | 2.8" ILI9341 SPI, 320×240 (touch optional, unused) | Make sure it runs on 3.3 V logic. Most red "2.8 TFT SPI" boards do. |
+| E2 | TFT display | 1 | 2.8" **ILI9341** SPI, 320×240 (touch optional, unused) | Check that the listing says ILI9341 (look-alikes may be ST7789). 3.3 V logic. Leave the `T_*` (touch) and SD-card pins unconnected. |
 | E3 | Rotary encoder | 1 | KY-040 module (CLK, DT, SW, +, GND) | Power it from **3.3 V**, not 5 V. |
-| E4 | Stepper drivers | 2 | **TMC2209** (quiet, recommended), A4988 or DRV8825. External DM542/TB6600 for NEMA23. | STEP/DIR/EN interface. See §4.4 for external drivers. |
+| E4 | Stepper drivers | 2 | **TMC2209** (quiet, recommended), A4988 or DRV8825. External DM542/TB6600 for NEMA23. | STEP/DIR/EN. Use the decision table below. TMC2209: leave PDN/UART, CLK, DIAG and INDEX unconnected. |
 | E5 | Stepper motors | 2 | NEMA17, 1.8°, 40–60 N·cm, ≤ 1.7 A (light antennas). NEMA23 for heavier arrays. | Torque needed depends on the gear ratio (§5). |
-| E6 | Motor PSU | 1 | 12 V (A4988) or 24 V (TMC2209/DRV8825), ≥ 3 A | Higher voltage gives better high-speed torque. Stay under the driver's VMOT max. |
+| E6 | Motor PSU | 1 | 12–24 V DC, ≥ 3 A, **enclosed** (brick or covered terminals) | All three StepStick drivers run on 12–24 V, and a 13.8 V station supply works. Higher voltage gives better high-speed torque. Stay under the driver's VMOT max. |
 | E7 | Buck converter | 1 | LM2596 or MP1584, adjustable, set to **5.0 V** before connecting | Feeds the ESP32 `VIN` pin. |
 | E8 | Bulk capacitors | 2 | 100 µF ≥ 35 V electrolytic | One per driver, across VMOT–GND, as close as possible to the driver. |
-| E9 | Resistors | 4–6 | 10 kΩ ¼ W | EN pull-ups (2), encoder pull-ups if not on module (2), home-switch pull-ups (2, optional). |
+| E9 | Resistors | 6 (4 + 2 optional) | 10 kΩ ¼ W | EN pull-ups (2), encoder pull-ups if not on module (2), home-switch pull-ups (2, optional). |
 | E10 | Fuse + holder | 1 | 3–5 A blade or glass | On the PSU + output. |
 | E11 | Home/limit switches (optional) | 2 | NO micro-switch with lever | Only if `USE_HOMING 1`. Add a 100 nF capacitor per input. |
 | E12 | Misc | — | Perfboard or PCB, JST/screw terminals, 22 AWG wire (motors 20 AWG), heat-shrink, IP65 enclosure | Use shielded cable for long motor runs. |
 | E13 | Level shifter | 1 | 74AHCT125 (5 V) | Only for opto-isolated DM542/TB6600 drivers (§4.4). |
+| E14 | Build hardware | — | Female header sockets for the ESP32 and drivers · small heatsinks for both drivers · power switch · IP65 cable glands · data-capable USB cable · 4-core motor cable (length = controller-to-mast distance, §5.4) · 100 nF capacitors (2, for home inputs) | Sockets let you swap a dead driver without soldering. |
+
+**Which driver, microstepping and supply?**
+
+| Your build | Driver | Microsteps | PSU |
+|---|---|---|---|
+| Handheld Yagi, 5:1 belt az + worm el | TMC2209 (quiet) | ×8 or ×16 (§4.4) | 12–24 V |
+| You want ×4 with a 50:1 worm | A4988 or DRV8825 | ×4 | 12–24 V |
+| NEMA23 / heavy array | DM542 + 74AHCT125 | DIP switches | 24–48 V, within the driver's rating |
+
+**Tools:** multimeter (required), small ceramic/plastic screwdriver for Vref, soldering iron, crimper for JST/Dupont, phone inclinometer app, compass.
 
 ### 3.2 Mechanical (see [§5](#5-mechanics-building-the-azel-rotator))
 
@@ -148,6 +159,18 @@ A machine-readable copy is in [`BOM.csv`](BOM.csv).
 | 5 V in | — | **VIN** | Buck converter 5 V out | Or power via USB while on the bench. |
 | Logic 3.3 V | — | **3V3** | TFT VCC/LED, encoder +, driver VDD, pull-ups | ESP32 on-board LDO (~500 mA budget shared with Wi-Fi). |
 
+**Finding the pins on a real board** (silkscreen labels differ by vendor):
+
+| GPIO | DOIT DevKit V1 (30-pin) | Espressif DevKitC (38-pin) |
+|---|---|---|
+| 36 / 39 | `VP` / `VN` | `SVP` / `SVN` (`SENSOR_VP/VN`) |
+| 16 / 17 | `RX2` / `TX2` | `IO16` / `IO17` |
+| other GPIOs, e.g. 26, 34 | `D26`, `D34` … | `IO26`, `IO34` … |
+| VIN | `VIN` | `5V` |
+
+* The 30-pin board has a single `3V3` pin. Build a **3V3 rail and a GND rail** on the perfboard to feed the TFT, encoder, both driver VDDs and the pull-ups.
+* On many boards the blue on-board LED is on GPIO2 (`TFT_DC`), so it flickers while the screen redraws. That is normal.
+
 ### 4.2 Power distribution
 
 ```
@@ -185,6 +208,30 @@ Set the current limit to roughly **70 % of the motor's rated phase current** and
 * **External opto-isolated drivers (DM542, TB6600):** inputs are usually specified for 5 V. Drive `PUL+`, `DIR+` and `ENA+` from the ESP32 through a **74AHCT125** level shifter (or use the driver's 24 V/5 V jumper per its manual), and tie `PUL−`, `DIR−` and `ENA−` to GND. On these drivers ENA *disables* the motor when its opto is energised, so with this wiring the default `EN active LOW = ON` is already correct: firmware "enable" = LOW = opto off = motor enabled.
 * **STEP pulse width:** the firmware never calls `setMinPulseWidth()`, so AccelStepper uses its default ~1 µs pulse. That is below the DRV8825 minimum (1.9 µs) and the DM542/TB6600 minimum (≥ 2.5 µs). For those drivers, add `stepperAz.setMinPulseWidth(3);` (DRV8825) or `(5)` (DM542/TB6600) for both axes in `setup()`. This only lengthens the STEP pulse. AccelStepper sets DIR and raises STEP immediately afterwards, so the DM542's ≥ 5 µs DIR set-up time is still not met. A reversal can lose up to one step unless you use FastAccelStepper (configurable dir-change delay) or a custom step routine.
 * **Microstepping changes steps/degree.** Recompute it (§5.3) after every jumper change.
+
+**Microstepping jumpers.** They are not driven by the ESP32: tie each pin to 3V3 (H) or GND (L).
+
+| Microsteps | A4988 MS1 MS2 MS3 | DRV8825 M0 M1 M2 | TMC2209 MS1 MS2 (standalone) |
+|---|---|---|---|
+| ×1 (full) | L L L *(floating)* | L L L *(floating)* | not available |
+| ×4 | L H L | L H L | not available |
+| ×8 | H H L | H H L | L L *(floating)* |
+| ×16 | H H H | L L H | H H |
+| ×32 | — | H L H | H L |
+| ×64 | — | — | L H |
+
+Floating pins read as L on Pololu-style A4988/DRV8825 boards (on-board pull-downs) and on TMC2209 (internal pull-downs). So **an unjumpered board runs at full step (A4988/DRV8825) or ×8 (TMC2209)**, not the ×16 used in the examples. Check your module's documentation, and **write down the value you chose: §5.3 needs it.**
+
+### 4.5 Before first power-on (checklist)
+
+1. ESP32 and drivers **not** inserted. Multimeter on Ω: PSU+ to GND, each VMOT to GND and 3V3 to GND must **not** read near 0 Ω.
+2. Check PSU polarity before connecting the buck (most LM2596 modules have no reverse protection).
+3. PSU on, buck only. Turn the buck trimmer until it reads **5.00 V** at the wire that will go to VIN. Power off.
+4. Insert the drivers. **Check orientation:** match the `EN` and `GND`/`VMOT` corners to the carrier's silkscreen. A reversed StepStick is destroyed and can take the ESP32 with it. Fit the heatsinks.
+5. **Set Vref with no motor connected:** ESP32 on USB (this powers driver VDD), motor PSU on. Black probe on GND, red probe on the metal top of the driver's trimpot. Turn it with the ceramic screwdriver to the §4.3 value. Power everything off.
+6. Connect the motors **with power off**. Then USB only, then the PSU. Watch for heat or smell for one minute.
+
+> **USB plus external 5 V:** don't connect USB while the buck feeds VIN unless you know your board has a diode between USB 5 V and VIN. If unsure, unplug the VIN wire while flashing and keep GND common.
 
 ---
 
@@ -226,9 +273,35 @@ steps_per_degree = motor_steps_per_rev × microsteps × gear_ratio / 360
 | Worm 50:1, **×4** (A4988/DRV8825, or TMC2209 via UART) | **111.1** | 7.2 °/s ✅ (self-locking el, adequate az) |
 | Worm 30:1, **×8** (TMC2209 standalone) | **133.3** | 6.0 °/s ✅ |
 
+> **Never set steps/deg from the menu.** Each click is 0.1.
+>
 > **The firmware default is `10.0` steps/deg.** That is almost certainly wrong for your build. Set `stepsPerDegAz/El` in `TrackerConfig` and flash, then use menu `DEFAULTS` → `SAVE`. Each menu click only changes it by 0.1, so use the menu for fine trimming only.
 
 **Top speed check:** `max °/s = min(TR MaxSpd, ~1000) / Steps/deg`. `loop()` calls `stepper.run()` once per iteration and ends with `delay(1)`, so each axis gets at most ~1000 steps/s. HTTPS calls and TFT redraws pause it further (§13.1). Settings above ~1000 st/s, including the 2500 st/s homing default, are not reached.
+
+### 5.4 Where the electronics live
+
+| Option | How | Trade-offs |
+|---|---|---|
+| **A. Controller indoors** (recommended to start) | Two 4-core motor cables to the mast (use ≥ 20 AWG; ≥ 18 AWG beyond ~10 m), plus 2-core per home switch | Easy access to the TFT/encoder and USB. Wi-Fi is indoors. Long motor runs lose some high-speed torque. |
+| **B. Everything at the mast** in an IP65 box | Only DC power goes up | Wi-Fi must reach the mast, and the TFT/encoder is only usable during setup. |
+
+The TFT's SPI bus is **not reliable over long leads**. Keep it under ~20–30 cm and don't run the display cable to the shack.
+
+### 5.5 Pick a reference build
+
+This project **does not include a mechanical design**. Choose one of these:
+
+* **SatNOGS Rotator v3:** build **only its mechanics** (not its controller), and take the gear ratio and motor from its BOM for §5.3. SatNOGS also has its own controller, driven by Gpredict on a PC. This project's value is **standalone, PC-free** tracking.
+* **Off-the-shelf worm gearbox per axis:** e.g. an NMRV030 (50:1 or 30:1, self-locking) with a NEMA17 input flange. Fix the boom to the output shaft with a U-bolt/saddle clamp.
+* **Bench rig:** no antenna, a paper pointer on each motor shaft. Use it for all of §7.
+
+**Torque estimate (gravity only).** Example: a 1.2 kg antenna with its centre of gravity 5 cm off the elevation axle gives 1.2 × 9.81 × 0.05 ≈ **0.59 N·m** at the axle.
+
+* Through a 50:1 worm (~40 % efficiency): 0.59 / (50 × 0.4) ≈ 3 N·cm at the motor.
+* Through a 5:1 belt (~95 %): ≈ 12 N·cm.
+
+Double it for margin, then add wind load, which usually dominates. Balancing the boom removes the gravity term.
 
 ---
 
@@ -256,7 +329,7 @@ steps_per_degree = motor_steps_per_rev × microsteps × gear_ratio / 360
 
 1. Create a free account at [n2yo.com](https://www.n2yo.com/).
 2. Open your profile and generate an **API key** at the bottom of the page.
-3. Test it from a computer **before** flashing (replace `YOUR_KEY`, lat/lon/alt):
+3. Test it from a computer **before** flashing (replace `YOUR_KEY`, lat/lon/alt). You can also paste the URL into a browser. A bad key returns an error message instead of JSON with an `info` block. The second sample asks for passes with max elevation ≥ 10°; the firmware asks for 0° (§13.7).
 
 ```bash
 # Current position of the ISS (NORAD 25544) for an observer in Guadalajara, 1600 m
@@ -280,10 +353,12 @@ The firmware reads these fields:
 
 ### 6.3 Edit the configuration in `tracker-v2.ino`
 
+Find the block under `// ====================== WIFI / API` (around line 25) and fill in the **empty quotes**. Code comments and some function names are in Spanish: `obtenerPosicionActual` = get current position, `actualizarPase` = update pass.
+
 ```cpp
-const char* ssid     = "YourWiFi";       // 2.4 GHz network
-const char* password = "YourPassword";
-const char* apiKey   = "XXXXXX-XXXXXX-XXXXXX-XXXX";
+const char* ssid     = "YourWiFi";       // shipped as "" — 2.4 GHz network
+const char* password = "YourPassword";   // shipped as ""
+const char* apiKey   = "XXXXXX-XXXXXX-XXXXXX-XXXX";  // shipped as ""
 const int   noradID  = 25544;            // satellite to track (25544 = ISS)
 
 float latitude  = 20.628914;             // your station, decimal degrees (+N)
@@ -298,15 +373,26 @@ int   altitude  = 1600;                  // metres above sea level
 | `altitude` | Metres above sea level. Small errors don't matter much. |
 | Pin `#define`s | Only change them if your wiring differs from §4.1. |
 | `USE_HOMING` | `1` only when both home switches are installed (§7.5). |
+| `stepsPerDegAz/El` (in `TrackerConfig`, search for `float stepsPerDegAz = 10.0f;`, ~line 108) | From §5.3 and your §4.4 microstepping. **Set it here, before the first flash.** |
+| `azContinuous` (in `TrackerConfig`) | `true` (default): shortest path, so **coax and motor cables can wind up over many passes**. Mark the cable and unwind by hand when needed. `false`: no wind-up, but a ~360° unwind mid-pass when a pass crosses north (§13.6). |
 
-> **Don't commit your Wi-Fi password or API key.** Before pushing changes, put them in a `secrets.h` file that is listed in `.gitignore`, or blank them again.
+> **Don't commit your Wi-Fi password or API key.** The simplest rule is to blank them again before committing. To keep them out of git for good:
+> 1. Create `secrets.h` next to the `.ino` with `#define WIFI_SSID "..."`, `#define WIFI_PASS "..."` and `#define N2YO_KEY "..."`.
+> 2. Add `#include "secrets.h"` at the top of the sketch.
+> 3. Replace the literals: `const char* ssid = WIFI_SSID;` and so on.
+> 4. Add a `.gitignore` containing `secrets.h`.
 
 ### 6.4 Build and upload
 
-1. Connect the ESP32 by USB. Select the port under *Tools → Port*.
-2. **Disconnect motor power (or the drivers' EN) for the first flash.**
-3. Click **Upload**. If it stays at `Connecting...`, hold the board's **BOOT** button until the upload starts.
-4. Open the Serial Monitor at **115200 baud**.
+0. **Make a sketch folder.** Arduino IDE compiles every `.ino` in a folder together, and this repo has two (v1 and v2). Create a folder named `tracker-v2`, copy `tracker-v2.ino` into it, and open *that* file. If you see `redefinition of 'void setup()'`, you opened the repo folder instead.
+1. Connect the ESP32 by USB and select the port under *Tools → Port*. **No new port?**
+   * Use a **data** USB cable; many are charge-only.
+   * Install the USB-serial driver for the chip next to the USB socket: **CP2102** → Silicon Labs CP210x VCP driver; **CH340/CH9102** → WCH driver.
+   * Linux: `sudo usermod -aG dialout $USER`, then log out and in.
+   * macOS: the settings menu is *Arduino IDE → Settings*.
+2. **Leave the motor PSU off** for the first flash.
+3. Click **Upload**. If it stays at `Connecting...`, hold the board's **BOOT** button until the upload starts. If uploads still stall, unplug the TFT DC wire (GPIO2) while flashing.
+4. (Optional) Serial Monitor at 115200 baud. **v2 prints no messages**: you'll only see the ESP32 boot text. All status is on the TFT.
 
 ---
 
@@ -318,11 +404,12 @@ Do this on the bench first with motors **not** attached to the antenna, then rep
 
 | Step | Expect | If not |
 |---|---|---|
-| 1. USB only, no motor PSU | TFT shows `Booting...` then `Ready`, then the status screen | Blank or white TFT → check SPI wiring, 3V3, LED pin |
+| 0. Before flashing: `stepsPerDegAz/El` set in `TrackerConfig` (§6.3), microstep jumpers set (§4.4), §4.5 checklist done | — | — |
+| 1. USB only, no motor PSU | `Booting...` (a few seconds, up to 40 s if Wi-Fi/NTP fail), then green `Ready`. The status screen replaces `Ready` after the first **successful** `/positions` call, ~30 s after boot. | Blank/white TFT → SPI wiring, 3V3, LED pin. **`Ready` stays for > 1 min** → Wi-Fi or API failure (§12). |
 | 2. Wait until ~30 s of uptime | Status screen with the satellite name appears (`Sat: SPACE STATION`). Pass state (`PREPASS`/countdown) only appears **~5 min after boot** (§13.7). | `Sat: -` → Wi-Fi/API problem (§12) |
 | 3. Click the encoder | `MENU [EDIT]` appears on `BW Az` (expected, §13.8). Click again → `[NAV]`. **Close it with a long press, never with the `EXIT` item.** | Nothing → encoder wiring/pull-ups |
 | 4. Turn the motor PSU on | Motors are mostly **unpowered** while idle (a faint tick is the EN flapping in §13.2) | Motors hold hard/hum while idle → wrong EN polarity |
-| 5. Motion test (bench only, motors not on the antenna): set `parkAzDeg = 45`, `parkElDeg = 20` in `TrackerConfig` and flash. **If nothing was saved yet, the rotator drives to 45°/20° by itself right after boot.** Otherwise: Menu → click again for `[NAV]` → `DEFAULTS` → `PARK NOW` → scroll back to `BW Az` → long press to close. Afterwards, power off, **turn both axes back to 0°/0° by hand**, restore 0/0 in the code and re-flash. | Both axes move to 45°/20° and the TFT `C:` values follow. (`PARK NOW` with the defaults does nothing: the position at boot already equals park 0/0.) | No motion → STEP/DIR/GND, Vref, VMOT |
+| 5. Motion test (bench only, motors not on the antenna): set `parkAzDeg = 45`, `parkElDeg = 20` in `TrackerConfig` and flash. **If nothing was saved yet, the rotator drives to 45°/20° by itself right after boot.** Otherwise: Menu → click again for `[NAV]` → `DEFAULTS` → `PARK NOW` → scroll back to `BW Az` → long press to close. Afterwards, power off, **turn both axes back to 0°/0° by hand**, restore 0/0 in the code and re-flash. | Both axes move to 45°/20°. On a bare motor (no gearbox) the shaft turns *angle × gear ratio*. The TFT `C:` values refresh only at the next position fetch (every 30 s while idle). (`PARK NOW` with the defaults does nothing: the position at boot already equals park 0/0.) | No motion → STEP/DIR/GND, Vref, VMOT |
 
 ### 7.2 Set the zero position (no homing switches)
 
@@ -338,10 +425,10 @@ Without home switches, **the firmware assumes the antenna is at Az 0°, El 0° w
 
 ### 7.3 Verify steps/degree and direction
 
-1. Set `stepsPerDegAz/El` from §5.3 in `TrackerConfig`, flash, then Menu → `DEFAULTS` → `SAVE` (use the menu items only for small trims).
+1. Check that the `Steps/deg` values shown in the menu match §5.3. **`DEFAULTS` → `SAVE` is only needed if you pressed `SAVE` before**; on a fresh board the `TrackerConfig` values are used immediately.
 2. Add a printed **360° protractor ring** on the az stage and a pointer, and keep the inclinometer on the boom.
-3. Wait for a pass (or temporarily set `Prepass` to 3600 s so `PREPASS` starts early). Compare the TFT `Az … C:` / `El … C:` readout with the physical pointer at several angles.
-4. **Direction reversed?** Swap one coil pair (`1A↔1B`) on that motor with power off.
+3. **Park-position sweep:** set the park position in `TrackerConfig` to 90/0, then 180/0, then 0/45, re-flashing and re-zeroing by hand each time as in §7.1 step 5. Measure each with the protractor/inclinometer. (Waiting for a real pass also works, but it is slow.)
+4. **Direction:** viewed from above, az must turn **clockwise** as `C:` increases, and el must tilt **up** as `C:` increases. If reversed, swap one coil pair (`1A↔1B`) on that motor with power off.
 5. **Scale wrong?** New steps/deg = old × (commanded angle ÷ real angle). Note that `rescaleStepper()` keeps the *believed* angle, which is right after a microstepping change but not after a calibration error. After correcting steps/deg, **SAVE, re-align the antenna to north/horizon and power-cycle** (or home) so the position starts from a true zero.
 
 ### 7.4 Backlash
@@ -395,12 +482,27 @@ stateDiagram-v2
 
 ### 8.2 Step-by-step for a pass
 
-1. **Pick a pass.** Look up upcoming passes on n2yo.com or in an app (Gpredict, Look4Sat, Heavens-Above). Passes with max elevation ≥ 20° are the most rewarding.
-2. **Power up ≥ 15 minutes before AOS.** The first pass query runs ~5 min after boot, and `PREPASS` starts 10 min before AOS. Start with the antenna at north/horizon (§7.2). Confirm `Sat:` shows the right name.
-3. **T−10 min (`PREPASS`):** the status turns yellow `PREPASS T-xxx s`. The antenna turns toward the satellite's rising bearing in deadband-sized steps and stays at 0° elevation.
-4. **AOS (`INPASS`):** green `IN PASS R: xxx s`. The antenna moves in steps whenever the satellite drifts outside the deadband (default 10°).
-5. **Listen and transmit** (§8.4).
-6. **LOS:** state → `PARKING`. The antenna returns to 0°/0° and motors turn off.
+Pick a pass on n2yo.com or in an app (Gpredict, Look4Sat, Heavens-Above). Passes with max elevation ≥ 20° are the most rewarding.
+
+| When | Tracker | Radio (example: SO-50) |
+|---|---|---|
+| T−30 min | Antenna at true north + horizon (or already parked there from last time). Power on. | Load the memories below. Uplink tone 67 Hz. |
+| T−25 | Status screen shows `Sat: <name>` (~30 s after boot) | |
+| T−20 | First pass query done (~5 min after boot) | |
+| T−10 | Yellow `PREPASS T-…`. Az turns toward the rising bearing; el stays 0°. | Ready to arm |
+| AOS | Green `IN PASS`. The antenna moves in ~10° jumps, which is normal. | Start on downlink +10 kHz. Send a 2 s carrier with **74.4 Hz** to arm SO-50, then call on 67 Hz. |
+| TCA | | Step down to 0 kHz |
+| LOS | `PARKING`: the antenna returns to 0°/0° | Step to −10 kHz before LOS |
+| After | Power off only after `IDLE`, so the antenna is already at the 0/0 reference for the next boot | |
+
+**SO-50 memories** (TX 145.850 MHz, 67 Hz; RX steps down through the pass): 436.805 → 436.800 → 436.795 → 436.790 → 436.785.
+**AO-123** uses the same layout: TX 145.850 MHz (67 Hz), RX 435.410 → 435.405 → 435.400 → 435.395 → 435.390.
+
+Good to know:
+
+* The tracker follows the **next** pass N2YO returns, even a 2° one, because the firmware asks for passes with min elevation 0 (§13.7). It doesn't know which pass you picked, so it may track and park through an earlier low pass first.
+* If the screen ever shows `Booting...` unexpectedly (power blip, brownout), the zero reference is lost. Re-align before the next pass.
+* A linear Yagi can't follow the satellite's changing polarisation, so expect fades.
 
 ### 8.3 What the TFT shows
 
@@ -437,6 +539,14 @@ The firmware points the antenna. **You** tune the radio.
 > ⚠️ **Known bug (§13.8):** the click that opens the menu is *also* applied to whichever item was selected when the menu last closed. On the first open that puts `BW Az` into `[EDIT]` (click once more for `[NAV]`). If the menu was last left on an **action**, opening it runs that action: `DEFAULTS` wipes the live config, `SAVE` saves, `PARK NOW` parks, and **`EXIT` closes the menu instantly, so it can't be opened again until reboot.** Until it's fixed, always close the menu with a long press and leave the cursor on a setting, never on an action.
 While the menu is open, **tracking pauses** (no new targets, but moves already in progress finish).
 Changes apply live but are **lost at reboot unless you select `SAVE`**.
+
+> **Safe close:**
+> 1. Scroll back up to `BW Az`.
+> 2. Long-press. Do it twice if `[EDIT]` is showing: the first long press only leaves edit mode.
+>
+> The menu picture **stays on screen for up to 30 s** after it closes (it is only replaced at the next position fetch). Turning the knob then does nothing, which is how you know it closed. **Don't click to "check"**: that reopens it and fires the selected item.
+>
+> One detent = one step, so turn slowly. Item positions: settings are items 1–25, then `PARK NOW` 26, `HOME NOW` 27, `SAVE` 28, `DEFAULTS` 29, `EXIT` 30.
 
 | Item | Default | Range / step | What it does |
 |---|---|---|---|
@@ -551,8 +661,15 @@ N2YO's free API is limited **per endpoint type, per hour** (check [n2yo.com/api]
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| TFT white or blank | SPI wiring, missing 3V3/LED, wrong `TFT_*` pins | Re-check §4.1. Try the Adafruit `graphicstest` example. |
-| Stuck at `Booting...` | Wi-Fi/NTP waits (20 s each in v2) | 2.4 GHz SSID, correct password, NTP/UDP 123 allowed |
+| `redefinition of 'void setup()'` when compiling | Both `.ino` files are in one sketch folder | §6.4 step 0 |
+| No COM/tty port appears | Charge-only cable, missing CP210x/CH340 driver, Linux permissions | §6.4 step 1 |
+| TFT white or blank | SPI wiring, missing 3V3/LED, wrong `TFT_*` pins, ST7789 look-alike | Re-check §4.1. Try the Adafruit `graphicstest` example. |
+| `Booting...` lasts ~40 s | Wi-Fi and/or NTP timing out (20 s each) | 2.4 GHz SSID, correct password, NTP/UDP 123 allowed |
+| **`Ready` never replaced by the status screen** (> 1 min) | Wi-Fi not joined (wrong SSID/password, 5 GHz-only network) or every API call fails (non-200). v2 shows **no error** on screen or serial. | Test the key in a browser (§6.2). Check the credentials, then reflash. |
+| Satellite name shows but never `PREPASS` | (a) First pass query is ~5 min after boot. (b) No pass in the next 24 h. (c) NTP blocked. | Wait 5 min. Check n2yo.com for passes. Allow UDP 123. |
+| Antenna off target from the very start of a pass | Longitude sign (west is **negative**), magnetic vs true north, not aligned at power-up | Compare TFT `T:` with n2yo.com's live az/el for your location: if `T:` is wrong, the config is wrong. If `C:` ≠ the pointer, it's mechanics or steps/deg. |
+| Screen jumps back to `Booting...` during moves or TX | Brownout or RF pickup resets the ESP32 | Check the buck under motor load, keep a 5 W handheld away from the box, add ferrites and decoupling |
+| Upload: "Sketch too big" | Default partition too small for your core/library versions | *Tools → Partition Scheme → Huge APP* |
 | `Sat: -` forever | HTTP error, bad API key, 10-error lockout | Test with `curl` (§6.2). Reboot after fixing (§13.3). |
 | Upload fails `Connecting...` | Strapping pins held by peripherals | Hold BOOT. Disconnect the TFT DC (GPIO2) if necessary. |
 | Motors hum while idle | EN polarity wrong | Toggle `EN active LOW` |
@@ -660,7 +777,10 @@ The BLDC item comes from the original project README. The rest are suggestions f
 
 ## 15. Safety checklist
 
-- [ ] Fuse on the PSU output, and the PSU chassis earthed.
+- [ ] **Mains:** use an enclosed PSU brick, or cover the mains terminals of an open-frame supply. Mains wiring is the most dangerous step in this build.
+- [ ] Fuse on the PSU output, and the PSU chassis earthed. PSU polarity checked before connecting the buck.
+- [ ] Driver heatsinks fitted and the box ventilated (motors ≤ 60 °C, §4.3).
+- [ ] Pinch points: worm and belt stages can trap fingers. The rotator moves at boot (parking) and at AOS.
 - [ ] Buck set to 5.0 V before the ESP32 is connected.
 - [ ] Driver Vref set **before** connecting motors. Motors never hot-plugged.
 - [ ] Mechanical end-stops (hard stops) on elevation, so a software error can't drive the antenna into the mast.
@@ -688,6 +808,21 @@ The BLDC item comes from the original project README. The rest are suggestions f
 | **Backlash** | Mechanical slack that has to be taken up when an axis reverses direction. |
 | **Microstepping** | Driver feature that divides each full motor step (1.8°) into smaller steps (A4988: up to 1/16; DRV8825: 1/32; TMC2209: up to 1/256 interpolated). |
 | **Doppler shift** | Frequency change caused by the satellite's relative velocity, ±10 kHz at 435 MHz. |
+| **Vref** | Reference voltage on a driver's trimpot that sets the motor current limit. |
+| **VMOT / VDD** | Driver motor supply (12–24 V) / driver logic supply (3.3 V). |
+| **StepStick** | The common small plug-in driver-board format (A4988, DRV8825, TMC2209). |
+| **Strapping pin** | ESP32 pin whose level at reset selects boot mode (GPIO0, 2, 5, 12, 15). |
+| **NVS** | Non-Volatile Storage: the ESP32 flash area where settings are saved. |
+| **CTCSS** | Sub-audible tone (e.g. 67 Hz) a repeater needs before it will relay you. |
+| **LPDA** | Log-periodic dipole array: a wide-band directional antenna. |
+| **Keyhole** | Region near zenith where an az/el mount needs very fast azimuth slews. |
+| **Slip ring** | Rotary electrical joint that lets cables pass a continuously rotating axis. |
+| **Lazy-Susan bearing** | Flat turntable bearing, a cheap azimuth bearing. |
+| **LRPT / APT** | Digital (Meteor) / analog (old NOAA) weather-image downlinks at 137 MHz. |
+| **CAT** | Computer control of a radio's frequency and mode. |
+| **Gpredict** | Free PC satellite-tracking program (can drive radios and rotators). |
+| **SGP4** | Standard orbit-propagation model that turns a TLE into positions. |
+| **SDR** | Software-defined radio receiver, e.g. RTL-SDR. |
 
 ---
 

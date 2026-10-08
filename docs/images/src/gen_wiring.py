@@ -202,6 +202,7 @@ def driver(DY, axis, step_g, dir_g, en_g, sy):
     wire(DX, sy + 130, DX - 20, sy + 130); gnd(DX - 20, sy + 130)
     # motor power on bottom edge
     BY = DY + 200
+    text(DX + 95, BY - 30, "MS pins → 3V3/GND per §4.4", 10, "middle", C_DRV, "bold")
     dot(1050, BY); text(1050, BY - 10, "VMOT", 10, "middle", C_PWR, "bold")
     dot(1120, BY); text(1120, BY - 10, "GND", 10, "middle", "#1f2937", "bold")
     wire(1050, BY, 1050, BY + 40, C_PWR); netflag(1050, BY + 40, "+VMOT", C_PWR, "top")
