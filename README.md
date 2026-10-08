@@ -38,6 +38,8 @@ flashing, calibration, tracking a real pass, the menu reference, troubleshooting
 2. Install the ESP32 core plus the libraries ArduinoHttpClient, ArduinoJson, Adafruit GFX, Adafruit ILI9341 and AccelStepper.
 3. In `tracker-v2.ino`, set `ssid`, `password`, `apiKey`, `noradID`, `latitude`, `longitude` and `altitude`.
 4. Flash it, point the antenna at **true north and the horizon**, then power up.
-5. In the menu, set `Steps/deg` for your gearing and choose **SAVE**.
+5. Set `stepsPerDegAz/El` for your gearing in `TrackerConfig` before flashing (the menu changes it by 0.1 per click, which is only good for trimming).
+
+⚠️ Close the on-device menu with a **long press**, never with its `EXIT` item ([why](docs/SATELLITE_TRACKER_GUIDE.md#138-menu-the-opening-click-also-activates-the-selected-item)).
 
 Full details are in the [guide](docs/SATELLITE_TRACKER_GUIDE.md).

@@ -11,6 +11,7 @@ E9,electronics,Resistor,6,10 kOhm 1/4 W,EN pull-ups x2; encoder A/B pull-ups x2 
 E10,electronics,Fuse + holder,1,3-5 A,On PSU positive output
 E11,electronics,Limit/home switch,2,NO lever micro-switch + 100 nF cap,Optional (USE_HOMING 1)
 E12,electronics,Wiring & enclosure,1,Perfboard/PCB; terminals; 20-22 AWG wire; IP65 box,Shielded/twisted pairs for motor runs
+E13,electronics,Level shifter (only for DM542/TB6600),1,74AHCT125 quad buffer (5 V supply),3.3 V GPIO to 5 V opto inputs
 M1,mechanical,Azimuth bearing,1,Lazy-Susan / slewing ring / tapered roller,Carries antenna weight
 M2,mechanical,Elevation axle + bearings,1,8 mm shaft + 2x KP08 pillow blocks,Axle through antenna centre of gravity
 M3,mechanical,Reduction per axis,2,Worm gear (self-locking) or GT2 belt 5:1 or planetary NEMA17,Worm strongly recommended for elevation

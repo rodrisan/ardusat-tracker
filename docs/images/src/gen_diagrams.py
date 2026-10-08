@@ -1,5 +1,5 @@
 """Generates system-architecture, pointing-geometry and pass-timeline SVGs. Usage: python3 gen_diagrams.py ../"""
-import math, sys
+import html, math, sys
 
 OUTDIR = sys.argv[1]
 FONT = "Helvetica, Arial, sans-serif"
@@ -16,7 +16,7 @@ class Svg:
 
     def text(self, x, y, s, size=13, anchor="start", fill="#111827", weight="normal", extra=""):
         self.add(f'<text x="{x}" y="{y}" font-size="{size}" text-anchor="{anchor}" fill="{fill}" '
-                 f'font-weight="{weight}" font-family="{FONT}" {extra}>{s}</text>')
+                 f'font-weight="{weight}" font-family="{FONT}" {extra}>{html.escape(s, quote=False)}</text>')
 
     def rect(self, x, y, w, h, fill, stroke, rx=10, dashed=False, sw=2):
         d = 'stroke-dasharray="7 5"' if dashed else ""
@@ -99,7 +99,7 @@ s.path("M295,300 L350,300 L350,74 L860,74 L860,130", PURPLE, arrow=True, dashed=
 s.line(295, 425, 380, 425, "#475569", both=True); s.label(337, 418, "Wi-Fi", "#475569")
 
 # Right: power + mechanics
-s.box(1000, 110, 330, 95, "#fce7f3", PINK, "2 × Stepper drivers", ["STEP / DIR / EN (3.3 V logic)", "TMC2209 · A4988 · DRV8825 · DM542"])
+s.box(1000, 110, 330, 95, "#fce7f3", PINK, "2 × Stepper drivers", ["STEP / DIR / EN (3.3 V logic)", "TMC2209 · A4988 · DRV8825", "DM542/TB6600 via 74AHCT125 (5 V)"])
 s.box(1000, 230, 330, 80, "#fce7f3", PINK, "2 × Stepper motors", ["NEMA17 / NEMA23, 200 steps/rev"])
 s.box(1000, 335, 330, 95, "#fef3c7", AMBER, "Az/El rotator mechanics", ["gear / belt / worm reduction", "bearings · cable wrap · end stops"])
 s.box(1000, 455, 330, 80, "#dcfce7", GREEN, "Antenna", ["Yagi / LPDA for 2 m + 70 cm"])
@@ -185,7 +185,7 @@ g.path(f"M{px+110},{py} A110,110 0 0,0 {px+110*math.cos(el):.1f},{py-110*math.si
 g.text(px + 120, py - 30, "el", 13, "start", AMBER, "bold")
 g.text(640, 520, "Elevation: 0° at horizon → 90° at zenith", 11.5, "middle", "#374151")
 g.text(640, 537, "Firmware clamps to EL Min…EL Max (−5…90° default)", 11.5, "middle", "#374151")
-g.text(640, 554, "Below 0° during PREPASS = pre-positioned at AOS azimuth", 11.5, "middle", "#374151")
+g.text(640, 554, "PREPASS: az follows the sat toward the AOS bearing", 11.5, "middle", "#374151")
 
 # Panel C: drivetrain
 g.text(1085, 100, "C · Drivetrain & steps/degree", 15, "middle", PINK, "bold")
@@ -196,12 +196,12 @@ for i, (t, sub) in enumerate(chain):
     g.box(960, y, 250, 58, "#fce7f3" if i < 2 else "#fef3c7", PINK if i < 2 else AMBER, t, [sub])
     if i < 3:
         g.line(1085, y + 58, 1085, y + 82, "#374151", arrow=True)
-g.rect(925, 465, 320, 125, "#f9fafb", "#d1d5db", sw=1.5)
+g.rect(905, 465, 360, 125, "#f9fafb", "#d1d5db", sw=1.5)
 g.text(1085, 487, "steps/deg = steps_rev × microsteps × ratio / 360", 12, "middle", "#111827", "bold")
 g.text(1085, 510, "200 × 16 × 5 / 360 = 44.4  (belt 5:1)", 12, "middle", "#374151")
 g.text(1085, 530, "200 × 16 × 50 / 360 = 444.4  (worm 50:1)", 12, "middle", "#374151")
-g.text(1085, 554, "Firmware default = 10.0 → set it in the menu", 11.5, "middle", RED, "bold")
-g.text(1085, 574, "max speed (°/s) = TR MaxSpd ÷ steps/deg", 11.5, "middle", "#374151")
+g.text(1085, 554, "Firmware default = 10.0 → set it in TrackerConfig", 11.5, "middle", RED, "bold")
+g.text(1085, 574, "°/s = steps/s ÷ steps/deg (firmware cap ≈ 1000 steps/s)", 11.5, "middle", "#374151")
 g.save("pointing-geometry.svg")
 
 # =====================================================================

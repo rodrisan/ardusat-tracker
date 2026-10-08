@@ -1,5 +1,5 @@
 """Generates wiring-schematic.svg (tracker-v2.ino pinout). Usage: python3 gen_wiring.py ../wiring-schematic.svg"""
-import sys
+import html, sys
 
 OUT = sys.argv[1]
 W, H = 1400, 1150
@@ -10,7 +10,7 @@ def add(s): el.append(s)
 
 def text(x, y, s, size=13, anchor="start", fill="#111827", weight="normal", style=""):
     add(f'<text x="{x}" y="{y}" font-size="{size}" text-anchor="{anchor}" fill="{fill}" '
-        f'font-weight="{weight}" font-family="{FONT}" {style}>{s}</text>')
+        f'font-weight="{weight}" font-family="{FONT}" {style}>{html.escape(s, quote=False)}</text>')
 
 def box(x, y, w, h, fill, stroke, title, sub=None, dashed=False):
     dash = 'stroke-dasharray="7 5"' if dashed else ""
@@ -183,7 +183,7 @@ text(HX + 105, HY + 98, "+100 nF to GND per input", 10, "middle", "#4b5563")
 # ---------------------------------------------------------------- Drivers
 def driver(DY, axis, step_g, dir_g, en_g, sy):
     DX = 960
-    box(DX, DY, 190, 200, "#fce7f3", C_DRV, f"Stepper driver {axis}", "TMC2209 / A4988 / DRV8825")
+    box(DX, DY, 190, 200, "#fce7f3", C_DRV, f"Stepper driver {axis}", "TMC2209 / A4988 / DRV8825*")
     rows = [("STEP", step_g, f"STEP_{axis}"), ("DIR", dir_g, f"DIR_{axis}"), ("EN", en_g, f"EN_{axis}")]
     for i, (p, g, n) in enumerate(rows):
         y = sy + 30 * i
@@ -216,7 +216,7 @@ def driver(DY, axis, step_g, dir_g, en_g, sy):
         y = sy + 30 * i
         pin_right(DX + 190, y, c)
         col = "#b91c1c" if c.startswith("1") else "#1d4ed8"
-        wire(DX + 190, y, MX - 52, y, col)
+        wire(DX + 190, y, MX - (55 ** 2 - (y - MY) ** 2) ** 0.5, y, col)
     add(f'<circle cx="{MX}" cy="{MY}" r="55" fill="#ffffff" stroke="#111827" stroke-width="2.5"/>')
     text(MX, MY - 6, "M", 26, "middle", "#111827", "bold")
     text(MX, MY + 14, f"NEMA17 {axis}", 11, "middle")
@@ -233,9 +233,9 @@ text(36, NY0 + 24, "Notes", 14, "start", "#111827", "bold")
 notes = [
     "1. ALL grounds are common: PSU −, buck GND, ESP32 GND, driver logic GND and driver motor GND.",
     "2. GPIO34/35/36/39 are input-only with no internal pull-ups → external 10 kΩ to 3V3 are mandatory. Never feed 5 V into any ESP32 pin.",
-    "3. EN pull-ups keep the drivers disabled while the ESP32 boots (GPIO14 toggles at reset). Menu item \"EN active LOW\" must match your driver.",
+    "3. EN pull-ups keep drivers disabled until the firmware drives EN (~20-40 s of Wi-Fi/NTP wait). GPIO14 emits PWM at reset; a pull-up can't block that — use GPIO16/17 for EN_AZ if it twitches.",
     "4. Set the driver current limit (Vref) BEFORE connecting motors; never unplug a motor while the driver is powered.",
-    "5. A4988/DRV8825: bridge RESET↔SLEEP. TMC2209 standalone: MS1/MS2 set microstepping. Recompute steps/deg after any change.",
+    "5. A4988/DRV8825: bridge RESET↔SLEEP. *DRV8825 has FAULT (not VDD) on that pin — leave it unconnected. TMC2209: MS1/MS2 set microstepping.",
     "6. * R1/R2 are usually already fitted on KY-040 modules — check before adding. GPIO2/GPIO15 are boot-strapping pins: keep TFT wired exactly as shown.",
 ]
 for i, n in enumerate(notes):

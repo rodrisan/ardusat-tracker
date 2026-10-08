@@ -13,7 +13,7 @@ The tracker follows **one satellite at a time**, chosen by `noradID` in `tracker
 | If you have… | Start with | Why |
 |---|---|---|
 | Dual-band FM handheld + handheld Yagi | **SO-50**, **AO-123**, **ISS** (repeater/APRS) | FM, no SSB needed, 10–15 min passes |
-| Receive-only SDR | **ISS** (APRS, SSTV events), **Meteor-M N2-3 / N2-4** (weather images) | No licence needed to receive in most countries |
+| Receive-only SDR | **Meteor-M N2-3 / N2-4** (weather images), **ISS** SSTV events / repeater downlink when ARISS enables them | No licence needed to receive in most countries |
 | All-mode full-duplex radio (SSB/CW) | **RS-44**, **FO-29**, **AO-7** | Linear transponders with many simultaneous QSOs. RS-44 gives long passes and wide coverage. |
 | 2.4 GHz uplink + 10 GHz dish | **QO-100** (only inside its footprint, §5) | Geostationary, so no tracking needed |
 
@@ -26,14 +26,14 @@ The easiest way to start: an FM dual-band radio, a small V/U Yagi, and manual Do
 | Name | NORAD | Uplink | Downlink | Tone | Status (Oct 2026) | Notes |
 |---|---|---|---|---|---|---|
 | **ISS** voice repeater | 25544 | 145.990 MHz FM | 437.800 MHz FM | 67.0 Hz | ✅ Active when ARISS enables it | Shares the radio with APRS and school contacts. ARISS announces downtime. |
-| **ISS** APRS digipeater | 25544 | 145.825 MHz | 145.825 MHz | — | ✅ Active (pauses during dockings) | 1200 bd AFSK. Receive with any 2 m radio + TNC/app. |
+| **ISS** APRS digipeater | 25544 | 145.825 MHz | 145.825 MHz | — | ⚠️ Intermittent (check ARISS) | 1200 bd AFSK. ARISS reports in 2026 show the radios mostly in voice/repeater configuration. |
 | **ISS** voice (school contacts, SSTV) | 25544 | 144.490 (ITU R2/R3) · 145.200 (R1) | 145.800 MHz FM | — | ⏱ Scheduled | Listen-only for most stations. SSTV events are announced by ARISS. |
 | **SO-50** (SaudiSat-1C) | 27607 | 145.850 MHz FM | 436.795 MHz FM | 67.0 Hz | ✅ Active | **Arm the 10-min timer** first: 2 s carrier with **74.4 Hz** tone. |
 | **AO-123** (ASRTU-1) | 61781 | 145.850 MHz FM | 435.400 MHz FM | 67.0 Hz | ✅ Reported active | Launched Nov 2024. ~460 km orbit, so passes are short (≈ 10 min). |
-| **AO-91** (Fox-1B) | 43017 | 435.250 MHz FM | 145.960 MHz FM | none (carrier-operated; older lists say 67 Hz) | ⚠️ End of life | Sunlight-only (AMSAT, Apr 2025). Don't try it in eclipse. Recent reports show no signal. |
+| **AO-91** (Fox-1B) | 43017 | 435.250 MHz FM | 145.960 MHz FM | none (carrier-operated; older lists say 67 Hz) | ⚠️ End of life | Sunlight-only (AMSAT, Apr 2025). Don't try it in eclipse. Reports are sparse (last SatNOGS observation seen: Apr 2026). |
 | **PO-101** (Diwata-2) | 43678 | 437.500 MHz FM | 145.900 MHz FM | 141.3 Hz | ❌ Likely non-operational | Was scheduled-only with a 10-min timer. Listed as "long non-operational" in Jan 2026 frequency sheets. |
 | **SO-124** (HADES-R) | 62690 | 145.925 MHz | 436.885–436.888 MHz | — | ❌ Re-entered 3 Feb 2026 | Listed so you don't waste a pass on it. |
-| **SO-125** (HADES-ICM) | 63492 | 145.875 MHz | 436.666 MHz | none | ❓ Reported re-entered | Unconfirmed. Check SatNOGS/AMSAT before trying. |
+| **SO-125** (HADES-ICM) | 63492 | 145.875 MHz | 436.666 MHz | none | ❌ Re-entered ~May 2026 | SatNOGS marked its transmitters inactive on 23 May 2026 ("satellite decayed"). |
 
 **AO-91 and PO-101 are "upside-down":** they have a 70 cm uplink and a 2 m downlink, so you apply Doppler correction on the *uplink*.
 
@@ -60,8 +60,8 @@ These need an all-mode radio (or two) that can transmit and receive at the same 
 
 | Name | NORAD | Downlink | Mode | Status (Oct 2026) | Notes |
 |---|---|---|---|---|---|
-| **Meteor-M N2-3** | 57166 | 137.900 MHz | LRPT 80 kbps (QPSK) | ✅ Operational with limits | Antenna not fully deployed, so the signal is weaker. A tracked Yagi helps. |
-| **Meteor-M N2-4** | 59051 | 137.900 MHz (137.100 backup) | LRPT 80 kbps | ✅ Operational | Sun-synchronous orbit at ~820 km, ~15 min passes |
+| **Meteor-M N2-3** | 57166 | 137.900 MHz | LRPT 72 or 80 kbps (QPSK) | ✅ Operational with limits | Antenna not fully deployed, so the signal is weaker. A tracked Yagi helps. |
+| **Meteor-M N2-4** | 59051 | 137.900 MHz (137.100 backup) | LRPT 72 or 80 kbps | ✅ Operational | Sun-synchronous orbit at ~820 km, ~15 min passes |
 | ~~NOAA-15 / 18 / 19~~ | 25338 / 28654 / 33591 | ~~137.62 / 137.9125 / 137.10~~ | APT | ❌ **Decommissioned** Jun–Aug 2025 | Old tutorials still list them. Don't plan around them. |
 
 * Decode LRPT with **SatDump**. You need a 137 MHz antenna. A QFH or V-dipole works without a rotator. A tracked 137 MHz Yagi improves weak N2-3 passes. The signal is circularly polarised, so a linear Yagi loses about 3 dB but still works.
@@ -87,6 +87,7 @@ These need an all-mode radio (or two) that can transmit and receive at the same 
 | IO-117 (GreenCube) | 53106 | MEO digipeater (435.310 MHz). Stopped responding in 2024. |
 | PO-101 (Diwata-2) | 43678 | Long non-operational (see §2) |
 | SO-124 (HADES-R) | 62690 | Re-entered Feb 2026 |
+| SO-125 (HADES-ICM) | 63492 | Re-entered ~May 2026 |
 | NOAA-15 / 18 / 19 | 25338 / 28654 / 33591 | Decommissioned 2025 |
 
 ---
@@ -105,7 +106,7 @@ The firmware's defaults (`tracker-v2.ino`) were written with ~10-minute LEO pass
 
 ### Recommended change: poll less often during a pass
 
-With the default 10° deadband (`BW 20 × 0.5`) and LEO rates of about 1°/s away from zenith, asking for the position every second gains almost nothing. A **3 s** interval keeps tracking error well inside the deadband and cuts usage by about 3×:
+With the default 10° deadband (`BW 20 × 0.5`) and LEO angular rates of roughly 0.1–0.5°/s for most of a pass (≈ 1°/s only near zenith on high passes), asking for the position every second gains almost nothing. A **3 s** interval keeps tracking error well inside the deadband and cuts usage by about 3×:
 
 ```cpp
 // tracker-v2.ino → updateIntervalsFromState()
@@ -151,7 +152,8 @@ const SatEntry kSats[] = {
   {"RS-44", 44909}, {"FO-29", 24278}, {"AO-7", 7530},
   {"METEOR N2-3", 57166}, {"METEOR N2-4", 59051},
 };
-// TrackerConfig: add  uint8_t satIndex = 0;  (bump cfg version)
+// TrackerConfig: add  uint32_t satIndex = 0;  (bump cfg version)
+// Must be uint32_t: menuHandle() writes IT_UINT32 items through a uint32_t*.
 // Use kSats[cfg.satIndex].norad when building the N2YO URLs,
 // and add an IT_UINT32-style menu item with range 0..N-1.
 ```
