@@ -74,6 +74,10 @@ TrackState trackState = IDLE;
 // ====================== UI EVENTS ======================
 enum UiEvent : uint8_t { EVT_NONE, EVT_UP, EVT_DOWN, EVT_SELECT, EVT_BACK };
 
+// Declared here (before the first function) so Arduino's auto-generated prototypes can see them
+enum MotionProfile : uint8_t { MP_TRACK, MP_PARK, MP_HOME };
+enum ActionId : uint8_t { ACT_SAVE, ACT_DEFAULTS, ACT_EXIT, ACT_PARK_NOW, ACT_HOME_NOW };
+
 // ====================== CONFIG STRUCT ======================
 struct TrackerConfig {
   uint32_t magic   = 0x54524B52; // 'TRKR'
@@ -246,7 +250,6 @@ void enableMotors(bool en) {
 }
 
 // ====================== MOTION PROFILES ======================
-enum MotionProfile : uint8_t { MP_TRACK, MP_PARK, MP_HOME };
 
 void applyMotionProfile(MotionProfile p) {
   switch (p) {
@@ -596,19 +599,7 @@ private:
   uint32_t btnLastChangeMs=0, btnDownMs=0;
 
   static EncoderInputSimple* self;
-  static void IRAM_ATTR isrA() {
-    if (!self) return;
-
-    uint32_t nowUs = (uint32_t)micros();
-    // debounce ISR simple
-    if (nowUs - self->lastIsrUs < 250) return; // 250us
-    self->lastIsrUs = nowUs;
-
-    bool bState = digitalRead(self->b);
-    int dir = bState ? -1 : +1;
-    if (self->invert) dir = -dir;
-    self->ticks += dir;
-  }
+  static void isrA();  // defined outside the class: IRAM_ATTR on an in-class body fails to link
 
   int32_t consumeTicks() {
     noInterrupts();
@@ -624,11 +615,23 @@ private:
   }
 };
 EncoderInputSimple* EncoderInputSimple::self = nullptr;
+void IRAM_ATTR EncoderInputSimple::isrA() {
+  if (!self) return;
+
+  uint32_t nowUs = (uint32_t)micros();
+  // debounce ISR simple
+  if (nowUs - self->lastIsrUs < 250) return; // 250us
+  self->lastIsrUs = nowUs;
+
+  bool bState = digitalRead(self->b);
+  int dir = bState ? -1 : +1;
+  if (self->invert) dir = -dir;
+  self->ticks += dir;
+}
 EncoderInputSimple encoder(ENC_A, ENC_B, ENC_BTN, false, true);
 
 // ====================== MENU ======================
 enum ItemType : uint8_t { IT_FLOAT, IT_INT32, IT_UINT32, IT_BOOL, IT_ACTION };
-enum ActionId : uint8_t { ACT_SAVE, ACT_DEFAULTS, ACT_EXIT, ACT_PARK_NOW, ACT_HOME_NOW };
 
 struct MenuItem {
   const char* label;
